@@ -1,4 +1,6 @@
 import java.util.concurrent.*;
+import java.util.Random;
+import java.util.Arrays;
 
 public class ReferenceDoc {
     public static void main(String[] args) {
@@ -44,6 +46,16 @@ public class ReferenceDoc {
 //        ForkJoinPool pool = new ForkJoinPool(processors);
 //        int result = pool.invoke(f);
 //        System.out.println("Result: " + result);
+
+        // For TestMutualExclusion
+//        TestMutualExclusion t[];
+//        int N = 8;
+//        t = new TestMutualExclusion[N];
+//        Lock lock = new Bakery(N); // Or any other mutex algorithm
+//        for (int i = 0; i < N; i++) {
+//            t[i] = new TestMutualExclusion(i, lock);
+//            t[i].start();
+//        }
     }
 }
 
@@ -144,5 +156,163 @@ class RunnableExampleBar extends RunnableExample implements Runnable {
     public void run() {
         for (int i = 0; i < 10; i++)
             System.out.println(getName() + " Hello World");
+    }
+}
+
+class TestMutualExclusion extends Thread {
+    int myId;
+    Lock lock;
+    Random r = new Random();
+    public TestMutualExclusion(int id, Lock lock) {
+        myId = id;
+        this.lock = lock;
+    }
+    void nonCriticalSection() {
+        System.out.println(myId + " is not in CS");
+        Util.mySleep(r.nextInt(1000));
+    }
+    void CriticalSection() {
+        System.out.println(myId + " is in CS***");
+        Util.mySleep(r.nextInt(1000));
+    }
+    public void run() {
+        while (true) {
+            lock.requestCS(myId);
+            CriticalSection();
+            lock.releaseCS(myId);
+            nonCriticalSection();
+        }
+    }
+}
+
+interface Lock {
+    void requestCS(int pid);
+    void releaseCS(int pid);
+}
+
+/**
+ * An attempt that violates mutual exclusion
+ */
+class Attempt1 implements Lock {
+    boolean openDoor = true;
+    public void requestCS(int i) {
+        while (!openDoor)
+            openDoor = false;
+    }
+    public void releaseCS(int i) {
+        openDoor = true;
+    }
+}
+
+/**
+ * An attempt that can deadlock
+ */
+class Attempt2 implements Lock {
+    boolean wantCS[] = {false, false};
+    public void requestCS(int i) {      // Entry Protocol
+        wantCS[i] = true;   // Declare Intent
+        while (wantCS[1-i]);    // Busy Wait
+    }
+    public void releaseCS(int i) {
+        wantCS[i] = false;
+    }
+
+}
+
+/**
+ * An attempt with strict alternation
+ */
+class Attempt3 implements Lock {
+    int turn = 0;
+    public void requestCS(int i) {
+        while (turn == 1-i);
+    }
+    public void releaseCS(int i) {
+        turn = 1-i;
+    }
+}
+
+class PetersonAlgorithm implements Lock {
+    boolean wantCS[] = {false, false};
+    int turn = 1;
+    public void requestCS(int i) {
+        int j = 1- i;
+        wantCS[i] = true;
+        turn = j;
+        while (wantCS[j] && (turn == j));
+    }
+    public void releaseCS(int i) {
+        wantCS[i] = false;
+    }
+}
+
+/**
+ * Utilizes multiple Peterson's algorithms to get the answer
+ */
+class FilterAlgorithm implements Lock {
+    int N;
+    int[] gate;
+    int[] last;
+    public FilterAlgorithm(int numProc) {
+        N = numProc;
+        gate = new int[N];  // We only use gate[1]... gate[N-1]; gate[0] is unused
+        Arrays.fill(gate, 0);
+        last = new int[N];
+        Arrays.fill(last, 0);
+    }
+    public void requestCS(int i) {
+        for (int k = 1; k < N; k++) {
+            gate[i] = k;
+            last[k] = i;
+            for (int j = 0; j < N; j++) {
+                while ((j != i) &&          // There is some other process
+                        (gate[j] >= k) &&   // that is ahead or at the same level
+                        (last[k] == i)      // and I am the last to update last[k]
+                ) {}    // Busy Wait
+            }
+        }
+    }
+    public void releaseCS(int i) {
+        gate[i] = 0;
+    }
+}
+
+/**
+ * Lamport's Bakery Algorithm
+ */
+class Bakery implements Lock {
+    int N;
+    boolean[] choosing;     // Inside Doorway
+    int[] number;
+    public Bakery(int numProc) {
+        N = numProc;
+        choosing = new boolean[N];
+        number = new int[N];
+        for (int j = 0; j < N; j++) {
+            choosing[j] = false;
+            number[j] = 0;
+        }
+    }
+    public void requestCS(int i) {
+        // Step 1: Doorway: Choose a number
+        choosing[i] = true;
+        for (int j = 0; j < N; j++) {
+            if (number[j] > number[i])
+                number[i] = number[j];
+        }
+        number[i]++;
+        choosing[i] = false;
+
+        // Step 2: Check if my number is the smallest
+        for (int j = 0; j < N; j++) {
+            while (choosing[j]);    // Process j in doorway
+            while ((number[j] != 0) &&
+                    ((number[j] < number[i]) ||
+                            ((number[j] == number[i]) && j < i))
+            );      // Busy Wait
+        }
+    }
+    public void releaseCS(int i) {
+        number[i] = 0;
     }
 }
