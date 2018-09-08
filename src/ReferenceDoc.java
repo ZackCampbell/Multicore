@@ -1,6 +1,9 @@
 import java.util.concurrent.*;
 import java.util.Random;
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class ReferenceDoc {
     public static void main(String[] args) {
@@ -189,6 +192,10 @@ interface Lock {
     void requestCS(int pid);
     void releaseCS(int pid);
 }
+interface myLock {
+    void lock();
+    void unlock();
+}
 
 /**
  * An attempt that violates mutual exclusion
@@ -342,5 +349,213 @@ class Fischer implements Lock {
     }
     public void releaseCS(int i) {
         turn = -1;
+    }
+}
+
+/**
+ * Building Locks
+ */
+class GetAndSet implements myLock {
+    AtomicBoolean isOccupied = new AtomicBoolean(false);
+    public void lock() {
+        while (isOccupied.getAndSet(true)) {
+            Thread.yield();
+            // Skip
+        }
+    }
+    public void unlock() {
+        isOccupied.set(false);
+    }
+}
+
+/**
+ * If it doesn't succeed in getAndSet, it spins on the 'get' operation
+ * Faster than just GetAndSet
+ */
+class GetAndGetAndSet implements myLock {
+    AtomicBoolean isOccupied = new AtomicBoolean(false);
+    public void lock() {
+        while (true) {
+            while (isOccupied.get()) {}
+            if (!isOccupied.getAndSet(true)) return;
+        }
+    }
+    public void unlock() {
+        isOccupied.set(false);
+    }
+}
+
+class MutexWithBackoff implements myLock {
+    AtomicBoolean isOccupied = new AtomicBoolean(false);
+    Random r = new Random();
+    public void lock() {
+        while (true) {
+            while (isOccupied.get()) {}
+            if (!isOccupied.getAndSet(true)) return;
+            else {
+                int timeToSleep = r.nextInt(1000);
+                try {
+                    Thread.sleep(timeToSleep);
+                } catch (InterruptedException e) {}
+            }
+        }
+    }
+    public void unlock() {
+        isOccupied.set(false);
+    }
+}
+
+/**
+ * NOT COMPLETE
+ */
+class TicketMutex implements myLock {
+    AtomicInteger nextTicket = new AtomicInteger(0);
+    AtomicInteger currentTicket = new AtomicInteger(0);
+    public void lock(){
+        int myticket = nextTicket.getAndIncrement();
+        while(myticket != currentTicket.get()){}    // skip
+    }
+    public void unlock(){
+        int temp = currentTicket.getAndIncrement();
+    }
+}
+
+/**
+ * Uses O(mn) space
+ */
+class AndersonLock implements myLock {
+    AtomicInteger tailSlot = new AtomicInteger(0);
+    int n;
+    boolean[] available;
+    ThreadLocal<Integer> mySlot; //     Initialize to 0
+    public AndersonLock(int n) {
+        this.n = n;
+        available = new boolean[n];
+        Arrays.fill(available, false);
+        available[0] = true;
+        try {
+            mySlot.set(0);
+        } catch (Exception e) {
+            System.err.println("Error: " + e);
+        }
+    }
+    public void lock() {
+        mySlot.set(tailSlot.getAndIncrement() % n);
+        while (!available[mySlot.get()]) {}
+    }
+    public void unlock() {
+        available[mySlot.get()] = false;
+        available[(mySlot.get() + 1) % n] = true;
+    }
+}
+
+/**
+ * CLHLock for mutex
+ */
+class CLHLock implements myLock {
+    class Node {
+        boolean locked;
+    }
+    AtomicReference<Node> tailNode;
+    ThreadLocal<Node> myNode;
+    ThreadLocal<Node> pred;
+
+    public CLHLock() {
+        tailNode = new AtomicReference<>(new Node());
+        tailNode.get().locked = false;
+        myNode = new ThreadLocal<>() {
+            protected Node initialValue() {
+                return new Node();
+            }
+        };
+        pred = new ThreadLocal<>();
+    }
+    public void lock() {
+        myNode.get().locked = true;
+        pred.set(tailNode.getAndSet(myNode.get()));
+        while (pred.get().locked) {
+            Thread.yield();
+        }
+    }
+    public void unlock() {
+        myNode.get().locked = false;
+        myNode.set(pred.get());     // Reusing predecessor node for future use
+    }
+}
+
+class MCSLock implements myLock {
+    class QNode {
+        boolean locked;
+        QNode next;
+        QNode() {
+            locked = true;
+            next = null;
+        }
+    }
+    AtomicReference<QNode> tailNode = new AtomicReference<>(null);
+    ThreadLocal<QNode> myNode;
+
+    public MCSLock() {
+        myNode = new ThreadLocal<>() {
+            protected QNode initialValue() {
+                return new QNode();
+            }
+        };
+    }
+    public void lock() {
+        QNode pred = tailNode.getAndSet(myNode.get());
+        if (pred != null) {
+            myNode.get().locked = true;
+            pred.next = myNode.get();
+            while (myNode.get().locked) {
+                Thread.yield();
+            }
+        }
+    }
+    public void unlock() {
+        if (myNode.get().next == null) {
+            if (tailNode.compareAndSet(myNode.get(), null)) return;
+            while (myNode.get().next == null) {
+                Thread.yield();
+            }
+        }
+        myNode.get().next.locked = false;
+        myNode.get().next = null;
+    }
+}
+
+/**
+ * Reads and returns old value in memory and replaces it with a new value
+ */
+class TestAndSet {
+    int myValue = -1;
+    public synchronized int testAndSet(int newValue) {
+        int oldValue = myValue;
+        myValue = newValue;
+        return oldValue;
+    }
+}
+
+/**
+ * Mutual exclusion using testAndSet
+ */
+class HWMutex implements Lock {
+    TestAndSet lockFlag;
+    public void requestCS(int i) {      // Entry Protocol
+        while (lockFlag.testAndSet(1) == 1);
+    }
+    public void releaseCS(int i) {      // Exit Protocol
+        lockFlag.testAndSet(0);
+    }
+}
+
+/**
+ * Swaps two memory locations in one atomic step
+ */
+class Synch {
+    public static synchronized void swap(Boolean m1, Boolean m2) {
+        Boolean temp = m1;
+        m1 = m2;
+        m2 = temp;
     }
 }
