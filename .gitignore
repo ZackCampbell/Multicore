@@ -86,3 +86,5 @@ fabric.properties
 .idea/httpRequests
 
 # Pauls removals
+*.iml
+.idea/
