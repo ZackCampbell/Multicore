@@ -1,5 +1,3 @@
-/* Peterson's solution to the mutual exclusion problem - 1981 */
-
 bool turn, flag[2];
 byte ncrit;
 
