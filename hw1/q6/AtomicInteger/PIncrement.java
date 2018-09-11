@@ -6,11 +6,6 @@ public class PIncrement implements Runnable{
         return 0;
     }
 
-    @Override
-    public void run() {
-
-    }
-
 	@Override
 	public void run() {
 		// TODO Auto-generated method stub
