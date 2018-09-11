@@ -24,9 +24,8 @@ public class PIncrement implements Runnable{
         	}
         }
         for(Thread t : Ts) {
-        	t.run();
-        }
-        
+        	t.start();
+        } 
         boolean busy = true;
         while(busy) {
         	busy = false;
@@ -37,15 +36,14 @@ public class PIncrement implements Runnable{
         		}
         	}
         }
-        
         return shared;
     }
     
-	int pid;
+    int pid;
 	int tcounter;
     
     public PIncrement(int pid, int numincrements) {
-    	tcounter = numincrements; 
+    	this.tcounter = numincrements; 
     	this.pid = pid;
     }
 
