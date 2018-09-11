@@ -1,3 +1,4 @@
+package q5;
 import java.util.concurrent.*;
 
 public class Frequency implements Callable<Integer>{
