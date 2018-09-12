@@ -353,6 +353,76 @@ class Fischer implements Lock {
 }
 
 /**
+ * Splitter algorithm
+ */
+class Splitter {
+    private boolean door;
+    private int last;
+    public Splitter() {
+        door = true;
+        last = -1;
+    }
+    public String split(int i) {
+        if (!door) {
+            return "Left";
+        } else {
+            door = false;
+            if (last == i)
+                return "Down";
+            else
+                return "Right";
+        }
+    }
+}
+
+/**
+ * Lamport's Fast Mutex Algorithm
+ */
+class FastMutex {
+    private int X, Y;
+    private boolean[] flag;
+    public FastMutex(int nSRMWRegisters) {
+        X = -1;
+        Y = -1;
+        flag = new boolean[nSRMWRegisters];
+    }
+
+    @SuppressWarnings("all")
+    public void acquire(int i) {
+        while (true) {
+            flag[i] = true;
+            X = i;
+            if (Y != -1) {      // Splitter left
+                flag[i] = false;
+                while (Y != -1) {}
+                // continue;
+            } else {
+                Y = i;
+                if (X == i) {   // Success with splitter
+                    return;     // Fast Path
+                } else {        // Splitter Right
+                    flag[i] = false;
+                    for (boolean j : flag) {
+                        while (j){}
+                    }
+                    if (Y == i)
+                        return; // Slow Path
+                    else {
+                        while (Y != -1){}
+                        // continue;
+                    }
+                }
+            }
+        }
+    }
+
+    public void release(int i) {
+        Y = -1;
+        flag[i] = false;
+    }
+}
+
+/**
  * Building Locks
  */
 class GetAndSet implements myLock {
