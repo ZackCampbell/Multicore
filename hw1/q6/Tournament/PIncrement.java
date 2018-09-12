@@ -8,10 +8,9 @@ public class PIncrement implements Runnable{
 	static volatile int shared;
 	
     public static int parallelIncrement(int c, int numThreads){
-        shared = 0;
+        shared = c;
         lock = new TournamentLock(numThreads);
         ArrayList<Thread> Ts = new ArrayList<Thread>();
-        
         for(int i = 0; i < numThreads; i++) {
         	if(numThreads != 7) {
         		Ts.add(new Thread(new PIncrement(i, 1200000 / numThreads)));
