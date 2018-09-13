@@ -353,6 +353,76 @@ class Fischer implements Lock {
 }
 
 /**
+ * Splitter algorithm
+ */
+class Splitter {
+    private boolean door;
+    private int last;
+    public Splitter() {
+        door = true;
+        last = -1;
+    }
+    public String split(int i) {
+        if (!door) {
+            return "Left";
+        } else {
+            door = false;
+            if (last == i)
+                return "Down";
+            else
+                return "Right";
+        }
+    }
+}
+
+/**
+ * Lamport's Fast Mutex Algorithm
+ */
+class FastMutex {
+    private int X, Y;
+    private boolean[] flag;
+    public FastMutex(int nSRMWRegisters) {
+        X = -1;
+        Y = -1;
+        flag = new boolean[nSRMWRegisters];
+    }
+
+    @SuppressWarnings("all")
+    public void acquire(int i) {
+        while (true) {
+            flag[i] = true;
+            X = i;
+            if (Y != -1) {      // Splitter left
+                flag[i] = false;
+                while (Y != -1) {}
+                // continue;
+            } else {
+                Y = i;
+                if (X == i) {   // Success with splitter
+                    return;     // Fast Path
+                } else {        // Splitter Right
+                    flag[i] = false;
+                    for (boolean j : flag) {
+                        while (j){}
+                    }
+                    if (Y == i)
+                        return; // Slow Path
+                    else {
+                        while (Y != -1){}
+                        // continue;
+                    }
+                }
+            }
+        }
+    }
+
+    public void release(int i) {
+        Y = -1;
+        flag[i] = false;
+    }
+}
+
+/**
  * Building Locks
  */
 class GetAndSet implements myLock {
@@ -557,5 +627,44 @@ class Synch {
         Boolean temp = m1;
         m1 = m2;
         m2 = temp;
+    }
+}
+
+class LFilter implements Lock {
+    int n;
+    int l;
+    int[] gate;
+    int[] last;
+    public LFilter(int n, int l) {
+        this.n = n;
+        this.l = l;
+        if (0 >= n - l + 1) {
+            gate = new int[0];
+            last = new int[0];
+        } else {
+            gate = new int[n - l + 1];
+            last = new int[n - l + 1];
+        }
+        Arrays.fill(gate, 0);
+        Arrays.fill(last, 0);
+    }
+
+    public void requestCS(int i) {
+        for (int k = 1; k < n - l + 1; k++) {
+            gate[i] = k;
+            last[k] = i;
+            int higher = l + 1;
+            while (higher > l && last[k] == i) {
+                higher = 0;
+                for (int j = 0; j < n; j++) {
+                    if (gate[k] >= i)
+                        higher++;
+                }
+            }
+        }
+    }
+
+    public void releaseCS(int i) {
+        gate[i] = 0;
     }
 }
