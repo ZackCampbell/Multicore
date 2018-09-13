@@ -11,7 +11,7 @@ public class SimpleTest {
 	
 	@Test
 	public void TimingAll() {
-		int startVal = 1000;
+		int startVal = 0;
 		long startTime;
 		long endTime;
 		long elapsedTime;
