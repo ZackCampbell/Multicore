@@ -629,3 +629,42 @@ class Synch {
         m2 = temp;
     }
 }
+
+class LFilter implements Lock {
+    int n;
+    int l;
+    int[] gate;
+    int[] last;
+    public LFilter(int n, int l) {
+        this.n = n;
+        this.l = l;
+        if (0 >= n - l + 1) {
+            gate = new int[0];
+            last = new int[0];
+        } else {
+            gate = new int[n - l + 1];
+            last = new int[n - l + 1];
+        }
+        Arrays.fill(gate, 0);
+        Arrays.fill(last, 0);
+    }
+
+    public void requestCS(int i) {
+        for (int k = 1; k < n - l + 1; k++) {
+            gate[i] = k;
+            last[k] = i;
+            int higher = l + 1;
+            while (higher > l && last[k] == i) {
+                higher = 0;
+                for (int j = 0; j < n; j++) {
+                    if (gate[k] >= i)
+                        higher++;
+                }
+            }
+        }
+    }
+
+    public void releaseCS(int i) {
+        gate[i] = 0;
+    }
+}
