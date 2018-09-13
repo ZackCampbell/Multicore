@@ -2,14 +2,15 @@ package q5;
 import java.util.concurrent.*;
 
 public class Frequency implements Callable<Integer>{
-    public static ExecutorService threadPool = Executors.newCachedThreadPool();
-    int[] array;
-    int x;
+    private static ExecutorService threadPool = Executors.newCachedThreadPool();
+    private int[] array;
+    private int x;
     public static void main(String[] args) {
         System.out.println("# of Threads: " + 3);
         System.out.println("Looking for: " + 0);
         int[] array = {1, 2, 2, 4, 2, 6, 7, 8, 9, 10};
         System.out.println(parallelFreq(2, array, 3));
+        threadPool.shutdown();
     }
 
     public Frequency(int[] array, int x) {
@@ -23,7 +24,11 @@ public class Frequency implements Callable<Integer>{
         int[] newArray;
         int index = 0;
         for (int i = 0; i < numThreads; i++) {
-            int newLength = (A.length / numThreads) + 1;
+            int newLength;
+            if (A.length % numThreads == 0)
+                newLength = (A.length / numThreads);
+            else
+                newLength = (A.length / numThreads) + 1;
             newArray = new int[newLength];
             int newArrayIndex = 0;
             for (int j = index; j < index + newLength; j++) {
@@ -46,6 +51,7 @@ public class Frequency implements Callable<Integer>{
             try {
                 Future<Integer> f1 = threadPool.submit(new Frequency(newArray, x));
                 result += f1.get();
+
             } catch (Exception e) {
                 System.err.println(e);
             }
@@ -53,7 +59,7 @@ public class Frequency implements Callable<Integer>{
         return result;
     }
 
-    public static void printArr(int[] arr) {
+    private static void printArr(int[] arr) {
         System.out.print("[ ");
         for (int i : arr) {
             System.out.print(i + ", ");
