@@ -5,13 +5,6 @@ public class Frequency implements Callable<Integer>{
     private static ExecutorService threadPool = Executors.newCachedThreadPool();
     private int[] array;
     private int x;
-    public static void main(String[] args) {
-        System.out.println("# of Threads: " + 3);
-        System.out.println("Looking for: " + 0);
-        int[] array = {1, 2, 2, 4, 2, 6, 7, 8, 9, 10};
-        System.out.println(parallelFreq(2, array, 3));
-        threadPool.shutdown();
-    }
 
     public Frequency(int[] array, int x) {
         this.array = array;
@@ -47,7 +40,7 @@ public class Frequency implements Callable<Integer>{
             }
             index += newLength;
             // Arrays are separated
-            printArr(newArray);
+            //printArr(newArray);
             try {
                 Future<Integer> f1 = threadPool.submit(new Frequency(newArray, x));
                 result += f1.get();
