@@ -1,7 +1,5 @@
 package q6.Tournament;
 
-import java.util.Arrays;
-
 public class TournamentLock implements Lock {
 	
 	volatile int numThreads;
@@ -17,8 +15,7 @@ public class TournamentLock implements Lock {
 	@Override
 	public void lock(int pid) {
 		for(int lvl = 1; lvl < numThreads; ++lvl) {
-			level[pid] = lvl;
-			last[lvl] = pid;
+			setLockVars(pid, lvl);
 			for(int proc = 0; proc < numThreads; ++proc) {
 				while(true) {
 					if((proc == pid) || (last[lvl] != pid) || (level[proc] < lvl)) {
@@ -29,9 +26,18 @@ public class TournamentLock implements Lock {
 		}
 		
 	}
+	
+	private synchronized void setLockVars(int pid, int lvl) {
+		level[pid] = lvl;
+		last[lvl] = pid;
+	}
+	
+	private synchronized void setUnlockVar(int pid) {
+		level[pid] = 0;
+	}
 
 	@Override
 	public void unlock(int pid) {
-		level[pid] = 0;
+		setUnlockVar(pid);
 	}
 }
