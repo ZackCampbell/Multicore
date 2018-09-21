@@ -87,6 +87,6 @@ fabric.properties
 
 # Pauls removals
 *.iml
-.idea/
-hw1/.classpath
-hw1/.project
+*.idea/
+*.classpath
+*.project
