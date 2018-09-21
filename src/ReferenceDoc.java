@@ -4,6 +4,8 @@ import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class ReferenceDoc {
     public static void main(String[] args) {
@@ -59,6 +61,21 @@ public class ReferenceDoc {
 //            t[i] = new TestMutualExclusion(i, lock);
 //            t[i].start();
 //        }
+
+        // Producer-Consumer Algorithm using Semaphores
+//        BoundedBuffer buffer = new BoundedBuffer();
+//        Producer producer = new Producer(buffer);
+//        Consumer consumer = new Consumer(buffer);
+
+        // Dining philosopher using semaphores
+//        DiningPhilosopher dp = new DiningPhilosopher(5);
+//        for (int i = 0; i < 5; i++)
+//            new Philosopher(i, dp);
+
+        // Dining philosopher using monitors
+//        DiningMonitor dm = new DiningMonitor(5);
+//        for (int i = 0; i < 5; i++)
+//            new Philosopher(i, dm);
     }
 }
 
@@ -666,5 +683,404 @@ class LFilter implements Lock {
 
     public void releaseCS(int i) {
         gate[i] = 0;
+    }
+}
+
+// ------------------------------------ Chapter 3 ------------------------------------
+
+class BinarySemaphore {
+    boolean value;
+    public BinarySemaphore(boolean initValue) {
+        value = initValue;
+    }
+    public synchronized void P() {
+        while (!value) {
+            Util.myWait(this);  // in the queue of blocked processes
+        }
+        value = false;
+    }
+    public synchronized void V() {
+        value = true;
+        notify();
+    }
+}
+
+class CountingSemaphore {
+    int value;
+    public CountingSemaphore(int initValue) {
+        value = initValue;
+    }
+    public synchronized void P() {
+        while (value == 0) Util.myWait(this);
+        value--;
+    }
+    public synchronized void V() {
+        value++;
+        notify();
+    }
+}
+
+
+/**
+ * Bounded buffer using semaphores
+ */
+class BoundedBuffer {
+    final int size = 10;
+    Object[] buffer = new Object[size];
+    int inBuf = 0, outBuf = 0;
+    BinarySemaphore mutex = new BinarySemaphore(true);
+    CountingSemaphore isEmpty = new CountingSemaphore(0);
+    CountingSemaphore isFull = new CountingSemaphore(size);
+
+    public void deposit(Object value) {
+        isFull.P();     // Wait if buffer is full
+        mutex.P();      // Ensures mutual exclusion
+        buffer[inBuf] = value;      // Update the buffer
+        inBuf = (inBuf + 1) % size;
+        mutex.V();
+        isEmpty.V();    // Notify any waiting customer
+    }
+
+    public Object fetch() {
+        Object value;
+        isEmpty.P();    // Wait if buffer is empty
+        mutex.P();      // Ensures mutual exclusion
+        value = buffer[outBuf];     // Read from buffer
+        outBuf = (outBuf + 1) % size;
+        mutex.V();
+        isFull.V();     // Notify any waiting producer
+        return value;
+    }
+}
+
+class Producer implements Runnable {
+    BoundedBuffer b = null;
+    public Producer(BoundedBuffer initb) {
+        b = initb;
+        new Thread(this).start();
+    }
+    @Override
+    public void run() {
+        Double item;
+        Random r = new Random();
+        while (true) {
+            item = r.nextDouble();
+            System.out.println("produced_item_" + item);
+            b.deposit(item);
+            Util.mySleep(200);
+        }
+    }
+}
+
+class Consumer implements Runnable {
+    BoundedBuffer b = null;
+    public Consumer(BoundedBuffer initb) {
+        b = initb;
+        new Thread(this).start();
+    }
+
+    @Override
+    public void run() {
+        Double item;
+        while (true) {
+            item = (Double)b.fetch();
+            System.out.println("fetched_item_" + item);
+            Util.mySleep(50);
+        }
+    }
+}
+
+/**
+ * ReaderWriter algorithm using semaphores
+ */
+class ReaderWriter {
+    int numReaders = 0;
+    BinarySemaphore mutex = new BinarySemaphore(true);
+    BinarySemaphore wlock = new BinarySemaphore(true);
+    public void startRead() {
+        mutex.P();
+        numReaders++;
+        if (numReaders == 1)
+            wlock.P();
+        mutex.V();
+    }
+    public void endRead() {
+        mutex.P();
+        numReaders--;
+        if (numReaders == 0)
+            wlock.V();
+        mutex.V();
+    }
+    public void startWrite() {
+        wlock.P();
+    }
+    public void endWrite() {
+        wlock.V();
+    }
+
+}
+
+interface Resource {
+    public void acquire(int i);
+    public void release(int i);
+}
+
+class Philosopher implements Runnable {
+    int id = 0;
+    Resource r = null;
+    public Philosopher(int initId, Resource initr) {
+        id = initId;
+        r = initr;
+        new Thread(this).start();
+    }
+    @Override
+    public void run() {
+        while (true) {
+            try {
+                System.out.println("Phil_" + id + "_thinking");
+                Thread.sleep(30);
+                System.out.println("Phil_" + id + "_hungry");
+                r.acquire(id);
+                System.out.println("Phil_" + id + "_eating");
+                Thread.sleep(40);
+                r.release(id);
+            } catch (InterruptedException e) {
+                return;
+            }
+        }
+    }
+}
+
+class DiningPhilosopher implements Resource {
+    int n = 0;
+    BinarySemaphore[] fork = null;
+    public DiningPhilosopher(int initN) {
+        n = initN;
+        fork = new BinarySemaphore[n];
+        for (int i = 0; i < n; i++) {
+            fork[i] = new BinarySemaphore(true);
+        }
+    }
+
+    @Override
+    public void acquire(int i) {
+        fork[i].P();
+        fork[(i + 1) % n].V();
+    }
+
+    @Override
+    public void release(int i) {
+        fork[i].V();
+        fork[(i + 1) % n].V();
+    }
+}
+
+class BoundedBufferMonitor {
+    final int size = 10;
+    Object[] buffer = new Object[size];
+    int inBuf = 0, outBuf = 0, count = 0;
+    public synchronized void deposit(Object value) {
+        while (count == size)   // Buffer full
+            Util.myWait(this);
+        buffer[inBuf] = value;
+        inBuf = (inBuf + 1) % size;
+        count++;
+        if (count == 1)     // Items available for fetch
+            notify();
+    }
+    public synchronized Object fetch() {
+        Object value;
+        while (count == 0)  // Buffer empty
+            Util.myWait(this);
+        value = buffer[outBuf];
+        outBuf = (outBuf + 1) % size;
+        count--;
+        if (count == size - 1)      // Empty slots available
+            notify();
+        return value;
+    }
+}
+
+/**
+ * Bounded buffer monitor for multiple producers and consumers
+ */
+class MultiBoundedBufferMonitor {
+    final int size = 10;
+    double[] buffer = new double[size];
+    int inBuf = 0, outBuf = 0, count = 0;
+    public synchronized void deposit(double value) {
+        while (count == size)   // Buffer full
+            Util.myWait(this);
+        buffer[inBuf] = value;
+        inBuf = (inBuf + 1) % size;
+        count++;
+        notifyAll();
+    }
+    public synchronized double fetch() {
+        double value;
+        while (count == 0)  // Buffer empty
+            Util.myWait(this);
+        value = buffer[outBuf];
+        outBuf = (outBuf + 1) % size;
+        count--;
+        notifyAll();
+        return value;
+    }
+}
+
+/**
+ * Dining philosopher using monitors
+ */
+class DiningMonitor implements Resource{
+    int n = 0;
+    int state[] = null;
+    static final int thinking = 0, hungry = 1, eating = 2;
+    public DiningMonitor(int initN) {
+        n = initN;
+        state = new int[n];
+        for (int i = 0; i < n; i++)
+            state[i] = thinking;
+    }
+    int left(int i) {
+        return (n + i - 1) % n;
+    }
+    int right(int i) {
+        return (i + 1) % n;
+    }
+    @Override
+    public synchronized void acquire(int i) {
+        state[i] = hungry;
+        test(i);
+        while (state[i] != eating)
+            Util.myWait(this);
+    }
+    @Override
+    public synchronized void release(int i) {
+        state[i] = thinking;
+        test(left(i));
+        test(right(i));
+    }
+    void test(int i) {
+        if ((state[left(i)] != eating) && (state[i] == hungry) && (state[right(i)] != eating)) {
+            state[i] = eating;
+            notifyAll();
+        }
+    }
+}
+
+/**
+ * Bounded buffer using reentrant locks and conditions
+ */
+class MBoundedBufferMonitor {
+    final int size = 10;
+    final ReentrantLock monitorLock = new ReentrantLock();
+    final Condition notFull = monitorLock.newCondition();
+    final Condition notEmpty = monitorLock.newCondition();
+    final Object[] buffer = new Object[size];
+    int inBuf = 0, outBuf = 0, count = 0;
+    public void put(Object x) throws InterruptedException {
+        monitorLock.lock();
+        try {
+            while (count == buffer.length)
+                notFull.await();
+            buffer[inBuf] = x;
+            inBuf = (inBuf + 1) % size;
+            count++;
+            notEmpty.signal();
+        } finally {
+            monitorLock.unlock();
+        }
+    }
+
+    public Object take() throws InterruptedException {
+        monitorLock.lock();
+        try {
+            while (count == 0)
+                notEmpty.await();
+            Object x = buffer[outBuf];
+            outBuf = (outBuf + 1) % size;
+            count--;
+            notFull.signal();
+            return x;
+        } finally {
+            monitorLock.unlock();
+        }
+    }
+}
+
+/**
+ * Linked list
+ */
+class ListQueue {
+    class Node {
+        public String data;
+        public Node next;
+    }
+    Node head = null, tail = null;
+    public synchronized void enqueue(String data) {
+        Node temp = new Node();
+        temp.data = data;
+        temp.next = null;
+        if (tail == null) {
+            tail = temp;
+            head = tail;
+        } else {
+            tail.next = temp;
+            tail = temp;
+        }
+        notify();
+    }
+    public synchronized String dequeue() {
+        while (head == null)
+            Util.myWait(this);
+        String returnval = head.data;
+        if (head == tail)
+            tail = null;
+        head = head.next;
+        return returnval;
+    }
+}
+
+/**
+ * CAN RESULT IN DEADLOCKS
+ */
+class BCell {
+    int value;
+    public synchronized int getValue() {
+        return value;
+    }
+    public synchronized void setValue(int i) {
+        value = i;
+    }
+    public synchronized void swap(BCell x) {
+        int temp = getValue();
+        setValue(x.getValue());
+        x.setValue(temp);
+    }
+}
+
+/**
+ * AVOIDS DEADLOCK
+ */
+class Cell {
+    int value;
+    public synchronized int getValue() {
+        return value;
+    }
+    public synchronized void setValue(int i) {
+        value = i;
+    }
+    protected synchronized void doSwap(Cell x) {
+        int temp = getValue();
+        setValue(x.getValue());
+        x.setValue(temp);
+    }
+    public void swap(Cell x) {
+        if (this == x)
+            return;
+        else if (System.identityHashCode(this) < System.identityHashCode(x))
+            doSwap(x);
+        else
+            x.doSwap(this);
     }
 }
