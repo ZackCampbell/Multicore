@@ -1,3 +1,5 @@
+package src;
+
 public class Symbols {
     public static final int Infinity = -1;
     // internet related

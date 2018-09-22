@@ -1,4 +1,4 @@
-package q6.ReentrantLock;
+package hw1.q6.ReentrantLock;
 
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;

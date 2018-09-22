@@ -1,4 +1,4 @@
-package q6.AtomicInteger;
+package hw1.q6.AtomicInteger;
 
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;

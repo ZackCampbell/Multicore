@@ -1,4 +1,4 @@
-package q6;
+package hw1.q6;
 
 import org.junit.Test;
 
@@ -26,11 +26,11 @@ public class SimpleTest {
 				if(type == "Tournament") {
 					res = q6.Tournament.PIncrement.parallelIncrement(startVal, i);
 				} else if(type == "Atomic") {
-					res = q6.AtomicInteger.PIncrement.parallelIncrement(startVal, i);
+					res = hw1.q6.AtomicInteger.PIncrement.parallelIncrement(startVal, i);
 				} else if(type == "Synchronized") {
 					res = q6.Synchronized.PIncrement.parallelIncrement(startVal, i);
 				} else {
-					res = q6.ReentrantLock.PIncrement.parallelIncrement(startVal, i);
+					res = hw1.q6.ReentrantLock.PIncrement.parallelIncrement(startVal, i);
 				}
 				endTime = System.nanoTime();
 				elapsedTime = endTime - startTime;

@@ -1,4 +1,4 @@
-package q5;
+package hw1.q5;
 
 import org.junit.Test;
 import static org.junit.Assert.*;
