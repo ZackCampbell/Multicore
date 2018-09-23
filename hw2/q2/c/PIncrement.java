@@ -7,7 +7,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class PIncrement implements Runnable{
     private int inc;
     private static final int NUM = 120000;
-    private static volatile int result;
+    private static volatile AtomicInteger result;
     private static AndersonLock aLock;
 
     public PIncrement(int numInc) {
@@ -15,7 +15,7 @@ public class PIncrement implements Runnable{
     }
 
     public static int parallelIncrement(int c, int numThreads) {
-        result = c;
+        result = new AtomicInteger(c);
         ArrayList<Thread> threads = new ArrayList<>();
         aLock = new AndersonLock(numThreads);
         for (int i = 0; i < numThreads; i++) {
@@ -34,14 +34,14 @@ public class PIncrement implements Runnable{
                 }
             }
         }
-        return result;
+        return result.get();
     }
 
     @Override
     public void run() {
         while (this.inc > 0) {
             aLock.lock();
-            result++;
+            result.getAndIncrement();
             aLock.unlock();
             this.inc--;
         }

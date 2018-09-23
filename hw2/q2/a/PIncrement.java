@@ -3,24 +3,26 @@ package q2.a;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class PIncrement {
+public class PIncrement implements Runnable{
     // Delta = 10 microseconds
-    static volatile AtomicInteger result;
-    static Fischer f;
+
+    private int pid;
+    private int inc;
+    private static final int NUM = 120000;
+    private static volatile AtomicInteger result;
+    private static Fischer f;
+
+    public PIncrement(int pid, int numInc) {
+        this.pid = pid;
+        this.inc = numInc;
+    }
+
     public static int parallelIncrement(int c, int numThreads) {
         result = new AtomicInteger(c);
         f = new Fischer(numThreads);
         ArrayList<Thread> threads = new ArrayList<>();
         for (int i = 0; i < numThreads; i++) {
-            final int pid = i;
-            Thread t = new Thread(() -> {
-                f.requestCS(pid);
-                for (int j = 0; j < (120000/numThreads); j++) {
-                    result.set(result.get() + 1);
-                }
-                f.releaseCS(pid);
-            });
-            threads.add(t);
+            threads.add(new Thread(new PIncrement(i, NUM/numThreads)));
         }
         for (Thread t : threads) {
             t.start();
@@ -38,6 +40,15 @@ public class PIncrement {
         return result.get();
     }
 
+    @Override
+    public void run() {
+        while (this.inc > 0) {
+            f.requestCS(this.pid);
+            result.getAndIncrement();
+            f.releaseCS(this.pid);
+            this.inc--;
+        }
+    }
 }
 
 interface Lock {
@@ -47,22 +58,20 @@ interface Lock {
 
 class Fischer implements Lock {
     int N;
-    int turn;
-    int delta;
+    private volatile int turn;
+    private final int delta = 10000;
     public Fischer(int numProc) {
         N = numProc;
         turn = -1;
-        delta = 10000;
     }
     public void requestCS(int i) {
         while (true) {
-            while (turn != -1) {
-                turn = i;
-                try {
-                    Thread.sleep(0, delta);
-                } catch (InterruptedException e) {}
-                if (turn == i) return;
-            }
+            while (turn != -1) {}
+            turn = i;
+            try {
+                Thread.sleep(0, delta);
+            } catch (InterruptedException e) {}
+            if (turn == i) return;
         }
     }
     public void releaseCS(int i) {

@@ -347,8 +347,8 @@ class Bakery implements Lock {
  */
 class Fischer implements Lock {
     int N;
-    int turn;
-    int delta;
+    volatile int turn;
+    final int delta;
     public Fischer(int numProc) {
         N = numProc;
         turn = -1;
@@ -356,13 +356,12 @@ class Fischer implements Lock {
     }
     public void requestCS(int i) {
         while (true) {
-            while (turn != -1) {
-                turn = i;
-                try {
-                    Thread.sleep(delta);
-                } catch (InterruptedException e) {}
-                if (turn == i) return;
-            }
+            while (turn != -1) {}
+            turn = i;
+            try {
+                Thread.sleep(delta);
+            } catch (InterruptedException e) {}
+            if (turn == i) return;
         }
     }
     public void releaseCS(int i) {
@@ -397,8 +396,8 @@ class Splitter {
  * Lamport's Fast Mutex Algorithm
  */
 class FastMutex {
-    private int X, Y;
-    private boolean[] flag;
+    private volatile int X, Y;
+    private volatile boolean[] flag;
     public FastMutex(int nSRMWRegisters) {
         X = -1;
         Y = -1;
@@ -413,21 +412,19 @@ class FastMutex {
             if (Y != -1) {      // Splitter left
                 flag[i] = false;
                 while (Y != -1) {}
-                // continue;
             } else {
                 Y = i;
                 if (X == i) {   // Success with splitter
                     return;     // Fast Path
                 } else {        // Splitter Right
                     flag[i] = false;
-                    for (boolean j : flag) {
-                        while (j){}
+                    for (int j = 1; j < flag.length; j++) {
+                        while (flag[j]){}
                     }
                     if (Y == i)
                         return; // Slow Path
                     else {
                         while (Y != -1){}
-                        // continue;
                     }
                 }
             }
@@ -514,7 +511,7 @@ class TicketMutex implements myLock {
 class AndersonLock implements myLock {
     AtomicInteger tailSlot = new AtomicInteger(0);
     int n;
-    boolean[] available;
+    volatile boolean[] available;
     ThreadLocal<Integer> mySlot; //     Initialize to 0
     public AndersonLock(int n) {
         this.n = n;
