@@ -20,12 +20,29 @@ public class SimpleTest {
 //        }
 //    }
 
+//    @Test
+//    public void testLamport() {
+//        System.out.println("Lamport's Fast Mutex ------ \n");
+//        int succeedCounter = 0;
+//        for (int i = 1; i <= 8; i *= 2) {
+//            int result = q2.b.PIncrement.parallelIncrement(0, i);
+//            System.out.println("Test with " + i + " threads yields " + result);
+//            if (result == OPERATIONS) {
+//                succeedCounter++;
+//                System.out.println("Succeeded");
+//            } else {
+//                System.out.println("Failed");
+//            }
+//        }
+//        Assert.assertEquals(succeedCounter, 4);
+//    }
+
     @Test
-    public void testLamport() {
-        System.out.println("Lamport's Fast Mutex ------ \n");
+    public void testAnderson() {
+        System.out.println("Anderson's Lock ------ \n");
         int succeedCounter = 0;
         for (int i = 1; i <= 8; i *= 2) {
-            int result = q2.b.PIncrement.parallelIncrement(0, i);
+            int result = q2.c.PIncrement.parallelIncrement(0, i);
             System.out.println("Test with " + i + " threads yields " + result);
             if (result == OPERATIONS) {
                 succeedCounter++;
@@ -36,12 +53,5 @@ public class SimpleTest {
         }
         Assert.assertEquals(succeedCounter, 4);
     }
-//
-//    @Test
-//    public void testAnderson() {
-//        int result = q2.c.PIncrement.parallelIncrement(0, 8);
-//        System.out.println(result);
-//        Assert.assertEquals(result, OPERATIONS);
-//    }
 
 }
