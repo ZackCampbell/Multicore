@@ -23,12 +23,12 @@ double MonteCarlo(int s) {
     return (circlePoints * 4.0) / s;
 }
 
-void main() {
-    srand(time(NULL));
-    double pi;
-    pi = MonteCarlo(100000000);
-    printf("Value of pi is: %lf\n", pi);
-}
+//void main() {
+//    srand(time(NULL));
+//    double pi;
+//    pi = MonteCarlo(100000000);
+//    printf("Value of pi is: %lf\n", pi);
+//}
 
 
 
