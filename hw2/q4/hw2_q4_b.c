@@ -7,10 +7,12 @@
 
 #define RADIUS 10000
 
+
+
 double MonteCarlo(int s) {
     double circlePoints = 0.0, rand_x, rand_y;
 //    printf("Max Threads = %d\n", omp_get_max_threads());
-    #pragma omp parallel for
+    #pragma omp parallel
     for (int i = 0; i < s; i++) {
         rand_x = (double)(rand() % (RADIUS + 1));
         rand_y = (double)(rand() % (RADIUS + 1));
