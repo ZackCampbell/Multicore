@@ -2,31 +2,30 @@
 #include <stdlib.h>
 #include <omp.h>
 #include <stdint.h>
+#include <math.h>
+#include <time.h>
 
-struct point {
-    int x;
-    int y;
-};
+#define RADIUS 10000
 
 double MonteCarlo(int s) {
-    double radius = 100.0;
-    int circlePoints;
-
-    for (int i = 0; i < s; i++) {       // For every point
-        if () {                         // If the point is in the circle
-            // Increment circlePoints
+    double circlePoints = 0.0, rand_x, rand_y;
+    for (int i = 0; i < s; i++) {
+        rand_x = (double)(rand() % (RADIUS + 1));
+        rand_y = (double)(rand() % (RADIUS + 1));
+        if (pow(rand_x, 2.0) + pow(rand_y, 2.0) <= pow(RADIUS, 2)) {       // If the point is in the circle
+            circlePoints++;                                   // Increment circlePoints
         }
     }
 
     // Block threads here
-    return (double)circlePoints * 4 / s;
-    //Write your code here
+    return (circlePoints * 4.0) / s;
 }
 
 void main() {
+    srand(time(NULL));
     double pi;
-    pi=MonteCarlo(100000000);
-    printf("Value of pi is: %lf\n",pi);
+    pi = MonteCarlo(100000000);
+    printf("Value of pi is: %lf\n", pi);
 }
 
 
