@@ -91,3 +91,4 @@ fabric.properties
 *.classpath
 *.project
 /bin/
+*makefile
