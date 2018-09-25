@@ -7,25 +7,19 @@
 
 #define RADIUS 10000
 
-
-
 double MonteCarlo(int s) {
     double circlePoints = 0.0, rand_x, rand_y;
-//    printf("Max Threads = %d\n", omp_get_max_threads());
-    #pragma omp parallel
+    #pragma omp parallel for        \
+        private (rand_x, rand_y)    \
+        reduction (+:circlePoints)
     for (int i = 0; i < s; i++) {
         rand_x = (double)(rand() % (RADIUS + 1));
         rand_y = (double)(rand() % (RADIUS + 1));
         if (pow(rand_x, 2.0) + pow(rand_y, 2.0) <= pow(RADIUS, 2)) {       // If the point is in the circle
-            #pragma omp atomic
-            circlePoints++;                                   // Increment circlePoints
+            circlePoints++;                                                // Increment circlePoints
         }
-        printf("Num threads: %d\n", omp_get_num_threads());
     }
 
-
-//    #pragma omp barrier
-    // Block threads here
     return (circlePoints * 4.0) / s;
 }
 
