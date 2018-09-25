@@ -2,8 +2,11 @@ import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 
 threads = list((1, 2, 4, 8))
-anderson = [0.023735584, 0.017731037, 0.014806327, 0.011248594]
-lamport = [0.009341668, 0.012728266, 0.018866985, 0.025974302]
+zacha = [0.023735584, 0.017731037, 0.014806327, 0.011248594]
+zachl = [0.009341668, 0.012728266, 0.018866985, 0.025974302]
+
+anderson = zacha
+lamport = zachl
 
 plt.scatter(threads, anderson, color='r')
 plt.scatter(threads, lamport, color='b')

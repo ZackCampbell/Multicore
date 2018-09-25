@@ -14,7 +14,7 @@ public class SimpleTest {
         long startTime;
         long endTime;
         long elapsedTime;
-        int res;
+        int res = 0;
         String status = "";
         ArrayList<String> methodTypes = new ArrayList<String>();
         methodTypes.add("Fischer"); methodTypes.add("Lamport");
