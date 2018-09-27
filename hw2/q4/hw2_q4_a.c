@@ -3,17 +3,20 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <unistd.h>
+#include <time.h>
+
 void printMatrix(int rs, int cs, double** matrix) {
-	printf("%d %d \n", rs, cs);
-	for(int i = 0; i < rs; i++) {
-	    for(int j = 0; j < cs; j++) {
-		printf("%lf  ", matrix[i][j]);
-		if(j == cs - 1) printf("\n");
-	    }
-	}
+    printf("%d %d \n", rs, cs);
+    for(int i = 0; i < rs; i++) {
+	for(int j = 0; j < cs; j++) {
+	    printf("%lf  ", matrix[i][j]);
+            if(j == cs - 1) printf("\n");
+        }
+    }
 }
 
-void MatrixMult(char file1[],char file2[],int T) {
+void MatrixMult(char file1[], char file2[], int T) {
     FILE* inputFile1 = fopen(file1, "r");
     FILE* inputFile2 = fopen(file2, "r");
     if (inputFile1 == NULL || inputFile2 == NULL) {
@@ -44,15 +47,21 @@ void MatrixMult(char file1[],char file2[],int T) {
     double** result = malloc(row3 * sizeof(double*));
     for(int i = 0; i < row3; i++) {
 	result[i] = malloc(col3 * sizeof(double));
-    }
-    for(int i = 0; i < row3; i++) {
-	for(int j = 0; j < col3; j++) {
+	for(int j = 0; j < col3; j++){
 	    result[i][j] = 0;
-	    for(int k = 0; k < col1; k++) {
-		result[i][j] += (matrix1[i][k] * matrix2[k][j]);
-	    }
-	}
+ 	}
     }
+    int i, j, k, res;
+    #pragma omp parallel for schedule(dynamic) private(res, i, j, k) num_threads(T) 
+	for(i = 0; i < row3; i++) {
+	    for(j = 0; j < col3; j++) {
+		res = 0;
+	        for(k = 0; k < col1; k++) {
+		    res += (matrix1[i][k] * matrix2[k][j]);
+	        }
+		result[i][j] = res;
+	    }
+        }
     printMatrix(row3, col3, result);
     for(int i = 0; i < row1; i++) {
         free(matrix1[i]);
