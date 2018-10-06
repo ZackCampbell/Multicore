@@ -1,4 +1,6 @@
 package src;
+import java.util.EmptyStackException;
+import java.util.NoSuchElementException;
 import java.util.concurrent.*;
 import java.util.Random;
 import java.util.Arrays;
@@ -1080,5 +1082,128 @@ class Cell {
             doSwap(x);
         else
             x.doSwap(this);
+    }
+}
+
+// ----------------------------- Chapter 6 ------------------------------
+
+class Node<T> {
+    T value;
+    Node<T> next = null;
+    public Node(T val) {
+        this.value = val;
+    }
+}
+
+class LockFreeStack<T> {
+    AtomicReference<Node<T>> top = new AtomicReference<Node<T>>(null);
+    public void push(T value) {
+        Node<T> node = new Node<T>(value);
+        while (true) {
+            Node<T> oldTop = top.get();
+            node.next = oldTop;
+            if (top.compareAndSet(oldTop, node)) return;
+            else Thread.yield();
+        }
+    }
+    public T pop() throws NoSuchElementException {
+        while(true) {
+            Node<T> oldTop = top.get();
+            if(oldTop == null) throw new NoSuchElementException();
+            T val = oldTop.value;
+            Node<T> newTop = oldTop.next;
+            if(top.compareAndSet(oldTop, newTop)) return val;
+            else Thread.yield();
+        }
+    }
+}
+
+class MyAtomicInteger extends AtomicInteger{
+    public MyAtomicInteger(int val) {super(val);}
+    public int myAddAndGet(int delta) {
+        for (;;) {
+            int current = get();
+            int next = current + delta;
+            if (compareAndSet(current, next))
+                return next;
+        }
+    }
+}
+
+class SingleQueue {
+    int head = 0;
+    int tail = 0;
+    Object[] items;
+    public SingleQueue(int size) {
+        head = 0;
+        tail = 0;
+        items = new Object[size];
+    }
+    public void put(Object x) {
+        while (tail - head == items.length) {} // Busy Wait
+        items[tail % items.length] = x;
+        tail++;
+    }
+    public Object get() {
+        while (tail - head == 0) {} // Busy Wait
+        Object x = items[head % items.length];
+        head++;
+        return x;
+    }
+}
+
+class Stack<T> {
+    Node<T> top = null;
+    public synchronized void push(T value) {
+        Node<T> node = new Node<>(value);
+        node.next = top;
+        top = node;
+    }
+    public synchronized T pop() throws NoSuchElementException {
+        if (top == null) {
+            throw new NoSuchElementException();
+        } else {
+            Node<T> oldTop = top;
+            top = top.next;
+            return oldTop.value;
+        }
+    }
+}
+
+class UnboundedQueue<T> {
+    ReentrantLock enqLock, deqLock;
+    Node<T> head;
+    Node<T> tail;
+    int size;
+    public UnboundedQueue() {
+        head = new Node<>(null);
+        tail = head;
+        enqLock = new ReentrantLock();
+        deqLock = new ReentrantLock();
+    }
+    public T deq() throws EmptyStackException {
+        T result;
+        deqLock.lock();
+        try {
+            if (head.next == null) {
+                throw new EmptyStackException();
+            }
+            result = head.next.value;
+            head = head.next;
+        } finally {
+            deqLock.unlock();
+        }
+        return result;
+    }
+    public void enq(T x) {
+        if (x == null) throw new NullPointerException();
+        enqLock.lock();
+        try {
+            Node<T> e = new Node<>(x);
+            tail.next = e;
+            tail = e;
+        } finally {
+            enqLock.unlock();
+        }
     }
 }
