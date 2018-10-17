@@ -1,52 +1,62 @@
 package q6.queue;
 
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class LockFreeQueue implements MyQueue {
-    ReentrantLock enqLock, deqLock;
-    Node head, tail;
+    AtomicReference<Node> head, tail;
+
     public LockFreeQueue() {
-        enqLock = new ReentrantLock();
-        deqLock = new ReentrantLock();
-        head = new Node(null);
-        tail = new Node(null);
+        Node n = new Node(null);
+        head = new AtomicReference<>(n);
+        tail = head;
     }
 
     public boolean enq(Integer value) {
-        if (value == null) throw new NullPointerException();
-        enqLock.lock();
-        try {
-            Node e = new Node(value);
-            tail.next = e;
-            tail = e;
-        } finally {
-            enqLock.unlock();
+        Node node = new Node(value);
+        while (true) {
+            Node currTail = tail.get();
+            Node currNext = currTail.next.get();
+            if (currTail == tail.get()) {
+                if (currNext.next == null) {
+                    if (currTail.next.compareAndSet(null, node)) {
+                        tail.compareAndSet(currTail, node);
+                        return true;
+                    }
+                } else {
+                    tail.compareAndSet(currTail, currNext);
+                }
+            }
         }
-        return false;
     }
 
     public Integer deq() {
-        Integer result;
-        deqLock.lock();
-        try {
-            if (head.next == null) {
-                return null;
+        while (true) {
+            Node currHead = head.get();
+            Node currTail = tail.get();
+            Node headNext = currHead.next.get();
+            if (currHead == head.get()) {
+                if (currHead == currTail) {
+                    if (headNext == null) {
+                        return null;
+                    }
+                    tail.compareAndSet(currTail, headNext);
+                } else {
+                    Integer val = headNext.value;
+                    if (head.compareAndSet(currHead, headNext)) {
+                        return currHead.value;
+                    }
+                }
             }
-            result = head.next.value;
-            head = head.next;
-        } finally {
-            deqLock.unlock();
         }
-        return result;
     }
 
     protected class Node {
         public Integer value;
-        public Node next;
+        public AtomicReference<Node> next;
 
         public Node(Integer x) {
             value = x;
-            next = null;
+            next = new AtomicReference<>(null);
         }
     }
 }
