@@ -1,20 +1,26 @@
 package q6.stack;
 
 public class LockStack implements MyStack {
-// you are free to add members
-
+    Node top;
     public LockStack() {
-        // implement your constructor here
+        top = null;
     }
 
-    public boolean push(Integer value) {
-        // implement your push method here
-        return false;
+    public synchronized boolean push(Integer value) {
+        Node node = new Node(value);
+        node.next = top;
+        top = node;
+        return true;
     }
 
     public Integer pop() throws EmptyStack {
-        // implement your pop method here
-        return null;
+        if (top == null) {
+            throw new EmptyStack();
+        } else {
+            Node oldTop = top;
+            top = top.next;
+            return oldTop.value;
+        }
     }
 
     protected class Node {
