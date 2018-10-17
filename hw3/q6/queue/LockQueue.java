@@ -1,10 +1,13 @@
 package q6.queue;
 
+import java.util.concurrent.locks.ReentrantLock;
+
 public class LockQueue implements MyQueue {
-// you are free to add members
+    ReentrantLock lock1, lock2;
 
     public LockQueue() {
-        // implement your constructor here
+        lock1 = new ReentrantLock();
+        lock2 = new ReentrantLock();
     }
 
     public boolean enq(Integer value) {
