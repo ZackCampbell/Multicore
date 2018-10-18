@@ -41,9 +41,9 @@ public class LockFreeQueue implements MyQueue {
                     }
                     tail.compareAndSet(currTail, headNext);
                 } else {
-                    Integer val = headNext.value;
+                    Integer val = currHead.value;
                     if (head.compareAndSet(currHead, headNext)) {
-                        return currHead.value;
+                        return val;
                     }
                 }
             }
