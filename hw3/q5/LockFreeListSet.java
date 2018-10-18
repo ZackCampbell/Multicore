@@ -2,8 +2,6 @@ package q5;
 
 import java.util.concurrent.atomic.AtomicMarkableReference;
 
-import q5.FineGrainedListSet.Node;
-
 public class LockFreeListSet implements ListSet {
 
 	private Node head = new Node(null);
