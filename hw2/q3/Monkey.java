@@ -7,7 +7,7 @@ import java.util.concurrent.locks.ReentrantLock;
 public class Monkey {
 	// declare the variables here
 	final static Lock lock = new ReentrantLock();
-	final Condition safeToClimb = lock.newCondition();
+	final static Condition safeToClimb = lock.newCondition();
 	
 	volatile static int numMonkeys = 0;
 	volatile static int dirMonkeys = 0;

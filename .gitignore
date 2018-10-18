@@ -92,3 +92,4 @@ fabric.properties
 *.project
 /bin/
 ./exam1/
+*makefile

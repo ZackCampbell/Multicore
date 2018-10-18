@@ -1,4 +1,6 @@
 package src;
+import java.util.EmptyStackException;
+import java.util.NoSuchElementException;
 import java.util.concurrent.*;
 import java.util.Random;
 import java.util.Arrays;
@@ -1080,5 +1082,278 @@ class Cell {
             doSwap(x);
         else
             x.doSwap(this);
+    }
+}
+
+// ----------------------------- Chapter 5: Wait-Free Syncronization ------------------------------
+
+class SafeBoolean {
+    boolean value;
+    public boolean getValue() {
+        return value;
+    }
+    public void setValue(boolean b) {
+        value = b;
+    }
+}
+
+class RegularBoolean {
+    boolean prev;   // not shared
+    SafeBoolean value;
+    public boolean getValue() {
+        return value.getValue();
+    }
+    public void setValue(boolean b) {
+        if (prev != b) {
+            value.setValue(b);
+            prev = b;
+        }
+    }
+}
+
+class MultiValued {
+    int n = 0;
+    boolean A[] = null;
+    public MultiValued(int maxVal, int initVal) {
+        n = maxVal;
+        A = new boolean[n];
+        for (int i = 0; i < n; i++)
+            A[i] = false;
+        A[initVal] = true;
+    }
+    public int getValue() {
+        int j = 0;
+        while (!A[j]) j++;  // Forward scan
+        int v = j;
+        for (int i = j - 1; i >=0; i--) {     // Backward scan
+            if (A[i])
+                v = i;
+        }
+        return v;
+    }
+    public void setValue(int x) {
+        A[x] = true;
+        for (int i = x - 1; i >= 0; i--)
+            A[i] = false;
+    }
+}
+
+class SRSW {
+    int value;
+    int ts;
+    public synchronized int getValue() {
+        return value;
+    }
+    public synchronized int getTS() {
+        return ts;
+    }
+    public synchronized void setValue(int x, int seq) {
+        value = x;
+        ts = seq;
+    }
+    public synchronized void setValue(SRSW x) {
+        value = x.getValue();
+        ts = x.getTS();
+    }
+}
+
+class MRSW {
+    public int val = 0, ts = 0, pid = 0;
+    int n = 0;
+    SRSW V[] = null;    // value written for reader i
+    SRSW Comm[][] = null;
+    int seqNo = 0;
+    public MRSW(int readers, int initVal) {
+        n = readers;
+        V = new SRSW[n];
+        for (int i = 0; i < n; i++) {
+            V[i].setValue(initVal, 0);
+        }
+        Comm = new SRSW[n][n];
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                Comm[i][j].setValue(initVal, 0);
+            }
+        }
+    }
+    public int getValue(int r) {        // Reader r reads
+        // read your own register
+        SRSW tsv = V[r];    // tsv is local
+        // Find the value with the largest timestamp
+        for (int i = 0; i < n; i++) {
+            if (Comm[i][r].getTS() > tsv.getTS()) {
+                tsv = Comm[i][r];
+            }
+        }
+
+        // Inform other readers
+        for (int i = 0; i < n; i++) {
+            Comm[r][i].setValue(tsv);
+        }
+        return tsv.getValue();
+    }
+    public void setValue(int x) {       // Accessed by the writer
+        // Write the value with the larger timestamp
+        seqNo++;
+        for (int i = 0; i < n; i++) {
+            V[i].setValue(x, seqNo);
+        }
+    }
+    public synchronized void setValue(int x, int seq, int id) {
+        val = x;
+        ts = seq;
+        pid = id;
+    }
+}
+
+class MultiWriter {
+    int n = 0;
+    MRSW V[] = null;    // Value written by the writer i
+    public MultiWriter(int writers, int initVal) {
+        n = writers;
+        V = new MRSW[n];
+        for (int i = 0; i < n; i++) {
+            V[i].setValue(initVal, 0, i);
+        }
+    }
+    public int getValue() {
+        MRSW tsv = V[0];    // tsv is local
+        for (int i = 1; i < n; i++) {
+            if ((tsv.ts < V[i].ts) || ((tsv.ts == V[i].ts) && (tsv.pid < V[i].pid)))
+                tsv = V[i];
+        }
+        return tsv.val;
+    }
+    public void setValue(int w, int x) {
+        int maxseq = V[0].ts;
+        for (int i = 0; i < n; i++) {
+            if (maxseq < V[i].ts)
+                maxseq = V[i].ts;
+        }
+        V[w].setValue(x, maxseq + 1, w);
+    }
+}
+
+// ----------------------------- Chapter 6: Concurrent Data Structures ------------------------------
+
+class Node<T> {
+    T value;
+    Node<T> next = null;
+    public Node(T val) {
+        this.value = val;
+    }
+}
+
+class LockFreeStack<T> {
+    AtomicReference<Node<T>> top = new AtomicReference<Node<T>>(null);
+    public void push(T value) {
+        Node<T> node = new Node<T>(value);
+        while (true) {
+            Node<T> oldTop = top.get();
+            node.next = oldTop;
+            if (top.compareAndSet(oldTop, node)) return;
+            else Thread.yield();
+        }
+    }
+    public T pop() throws NoSuchElementException {
+        while(true) {
+            Node<T> oldTop = top.get();
+            if(oldTop == null) throw new NoSuchElementException();
+            T val = oldTop.value;
+            Node<T> newTop = oldTop.next;
+            if(top.compareAndSet(oldTop, newTop)) return val;
+            else Thread.yield();
+        }
+    }
+}
+
+class MyAtomicInteger extends AtomicInteger{
+    public MyAtomicInteger(int val) {super(val);}
+    public int myAddAndGet(int delta) {
+        for (;;) {
+            int current = get();
+            int next = current + delta;
+            if (compareAndSet(current, next))
+                return next;
+        }
+    }
+}
+
+class SingleQueue {
+    int head = 0;
+    int tail = 0;
+    Object[] items;
+    public SingleQueue(int size) {
+        head = 0;
+        tail = 0;
+        items = new Object[size];
+    }
+    public void put(Object x) {
+        while (tail - head == items.length) {} // Busy Wait
+        items[tail % items.length] = x;
+        tail++;
+    }
+    public Object get() {
+        while (tail - head == 0) {} // Busy Wait
+        Object x = items[head % items.length];
+        head++;
+        return x;
+    }
+}
+
+// Lock Based Stack
+class Stack<T> {
+    Node<T> top = null;
+    public synchronized void push(T value) {
+        Node<T> node = new Node<>(value);
+        node.next = top;
+        top = node;
+    }
+    public synchronized T pop() throws NoSuchElementException {
+        if (top == null) {
+            throw new NoSuchElementException();
+        } else {
+            Node<T> oldTop = top;
+            top = top.next;
+            return oldTop.value;
+        }
+    }
+}
+
+class UnboundedQueue<T> {
+    ReentrantLock enqLock, deqLock;
+    Node<T> head;
+    Node<T> tail;
+    int size;
+    public UnboundedQueue() {
+        head = new Node<>(null);
+        tail = head;
+        enqLock = new ReentrantLock();
+        deqLock = new ReentrantLock();
+    }
+    public T deq() throws EmptyStackException {
+        T result;
+        deqLock.lock();
+        try {
+            if (head.next == null) {
+                throw new EmptyStackException();
+            }
+            result = head.next.value;
+            head = head.next;
+        } finally {
+            deqLock.unlock();
+        }
+        return result;
+    }
+    public void enq(T x) {
+        if (x == null) throw new NullPointerException();
+        enqLock.lock();
+        try {
+            Node<T> e = new Node<>(x);
+            tail.next = e;
+            tail = e;
+        } finally {
+            enqLock.unlock();
+        }
     }
 }
