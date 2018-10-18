@@ -3,7 +3,7 @@ package q5;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class CoarseGrainedListSet implements ListSet {
-	private volatile Node head = null;
+	private Node head = null;
 	private final ReentrantLock lock = new ReentrantLock();
 
     public CoarseGrainedListSet() {
@@ -95,8 +95,8 @@ public class CoarseGrainedListSet implements ListSet {
     }
 
     protected class Node {
-        public volatile Integer value;
-        public volatile Node next;
+        public Integer value;
+        public Node next;
 
         public Node(Integer x) {
             value = x;
@@ -109,8 +109,6 @@ public class CoarseGrainedListSet implements ListSet {
    check simpleTest for more info
    */
     public String toString() {
-        lock.lock();
-    	try {
 	        String ret = "";
 	        Node curr = head;
 	        while(curr != null) {
@@ -118,8 +116,5 @@ public class CoarseGrainedListSet implements ListSet {
 	        	curr = curr.next;
 	        }
 	        return ret;
-        } finally {
-        	lock.unlock();
-        }
     }
 }
