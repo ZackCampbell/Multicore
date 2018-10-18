@@ -3,58 +3,43 @@ package q5;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class CoarseGrainedListSet implements ListSet {
-	private volatile Node head;
-	private final ReentrantLock lock;
+	private volatile Node head = null;
+	private final ReentrantLock lock = new ReentrantLock();
 
     public CoarseGrainedListSet() {
-    	lock = new ReentrantLock();
-    	head = null;
     }
 
     public boolean add(int value) {
     	lock.lock();
     	try {
 	    	Node toAdd = new Node(value);
-	    	// only node
 	    	if(head == null) {
-	    		head = toAdd;
+	    		head = new Node(value);
 	    		return true;
 	    	}
-	    	// first node
-	    	if(head.value > toAdd.value) {
+	    	if(head.value > value) {
 	    		toAdd.next = head;
 	    		head = toAdd;
 	    		return true;
 	    	}
 	    	Node curr = head;
+	    	Node nxt = head.next;
 	    	while(true) {
-	    		// already exists
-	    		if(curr.value == toAdd.value) {
-	    			return false;
-	    		} 
-	    		if(curr.value < toAdd.value) {
-	    			// last node
-	    			if(curr.next == null) {
-	    				curr.next = toAdd;
-	    				return true;
-	    			}
-	    			// somewhere in the middle
-	    			if(curr.next.value > toAdd.value) {
-	    				toAdd.next = curr.next;
-	    				curr.next = toAdd;
-	    				return true;
-	    			}
-	    		}
-	    		if(curr.next == null) {
+	    		if(curr.value == value) {
 	    			return false;
 	    		}
+	    		if(nxt == null && curr.value < value) {
+	    			curr.next = new Node(value);
+	    			return true;
+	    		}
+	    		if(curr.value < value && value < nxt.value) {
+	    			toAdd.next = nxt;
+	    			curr.next = toAdd;
+	    			return true;
+	    		}
+	    		nxt = nxt.next;
 	    		curr = curr.next;
 	    	}
-    	} catch (Exception e) {
-    		e.printStackTrace();
-    		System.out.println(value);
-    		System.out.println(toString());
-    		return false;
     	} finally {
     		lock.unlock();
     	}
@@ -124,7 +109,8 @@ public class CoarseGrainedListSet implements ListSet {
    check simpleTest for more info
    */
     public String toString() {
-        try {
+        lock.lock();
+    	try {
 	        String ret = "";
 	        Node curr = head;
 	        while(curr != null) {
@@ -133,6 +119,7 @@ public class CoarseGrainedListSet implements ListSet {
 	        }
 	        return ret;
         } finally {
+        	lock.unlock();
         }
     }
 }

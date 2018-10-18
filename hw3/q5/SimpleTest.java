@@ -49,7 +49,7 @@ public class SimpleTest {
     }
     private void makeThread(ListSet list) {
         Thread[] threads = new Thread[3];
-        threads[0] = new Thread(new MyThread(0, 2000, list));
+        threads[0] = new Thread(new MyThread(0, 3000, list));
         threads[1] = new Thread(new MyThread(0, 3000, list));
         threads[2] = new Thread(new MyThread(1000, 3000, list));
         threads[1].start(); threads[0].start(); threads[2].start();
