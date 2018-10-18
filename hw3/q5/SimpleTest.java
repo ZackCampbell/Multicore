@@ -6,32 +6,10 @@ import org.junit.Test;
 public class SimpleTest {
 	
 	@Test
-	public void myCoarseTest() {
-		CoarseGrainedListSet list = new CoarseGrainedListSet();
-		boolean ret;
-		ret = list.add(3);
-		System.out.println(Boolean.toString(ret) + " " + list.toString());
-		ret = list.add(5);
-		System.out.println(Boolean.toString(ret) + " " + list.toString());
-		ret = list.add(7);
-		System.out.println(Boolean.toString(ret) + " " + list.toString());
-		ret = list.add(4);
-		System.out.println(Boolean.toString(ret) + " " + list.toString());
-		ret = list.add(5);
-		System.out.println(Boolean.toString(ret) + " " + list.toString());
-		ret = list.remove(2);
-		System.out.println(Boolean.toString(ret) + " " + list.toString());
-		ret = list.remove(3);
-		System.out.println(Boolean.toString(ret) + " " + list.toString());
-		ret = list.contains(5);
-		System.out.println(Boolean.toString(ret) + " " + list.toString());
-		ret = list.contains(0);
-		System.out.println(Boolean.toString(ret) + " " + list.toString());
-	}
-	
-	@Test
-	public void myFineTest() {
-		FineGrainedListSet list = new FineGrainedListSet();
+	public void myTest() {
+		//CoarseGrainedListSet list = new CoarseGrainedListSet();
+		//FineGrainedListSet list = new FineGrainedListSet();
+		LockFreeListSet list = new LockFreeListSet();
 		boolean ret;
 		ret = list.add(3);
 		System.out.println(Boolean.toString(ret) + " " + list.toString());
@@ -54,7 +32,7 @@ public class SimpleTest {
 		ret = list.contains(100);
 		System.out.println(Boolean.toString(ret) + " " + list.toString());
 	}
-	
+
     @Test
     public void testCoarseGrainedListSet() {
         CoarseGrainedListSet list = new CoarseGrainedListSet();

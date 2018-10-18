@@ -165,7 +165,7 @@ public class FineGrainedListSet implements ListSet {
     public String toString() {
         String ret = "";
         Node curr = head.next;
-        while(curr.value != null) {
+        while(curr.compareTo(tail) != 0) {
         	if(!curr.isDeleted) {
 	        	ret += Integer.toString(curr.value) + ",";
 	        	curr = curr.next;
