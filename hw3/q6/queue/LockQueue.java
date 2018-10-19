@@ -9,16 +9,16 @@ public class LockQueue implements MyQueue {
         enqLock = new ReentrantLock();
         deqLock = new ReentrantLock();
         head = new Node(null);
-        tail = new Node(null);
+        tail = head;
     }
 
     public boolean enq(Integer value) {
         if (value == null) throw new NullPointerException();
         enqLock.lock();
         try {
-            Node e = new Node(value);
-            tail.next = e;
-            tail = e;
+            Node node = new Node(value);
+            tail.next = node;
+            tail = node;
         } finally {
             enqLock.unlock();
         }
