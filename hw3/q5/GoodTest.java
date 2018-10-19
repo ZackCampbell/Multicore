@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class SimpleTest {
+public class GoodTest {
 	
 	@Test
 	public void myThreadTest() {
