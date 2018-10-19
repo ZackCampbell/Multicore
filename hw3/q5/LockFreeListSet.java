@@ -23,9 +23,6 @@ public class LockFreeListSet implements ListSet {
 	        	succ = prev.atom.getReference();
 	        }
 	        if(succ.compareTo(toAdd) == 0) {
-	        	if(succ.atom.isMarked()) {
-	        		continue;
-	        	}
 	        	return false;
 	        }
 	        toAdd.atom.set(succ, toAdd.atom.isMarked());
@@ -37,6 +34,7 @@ public class LockFreeListSet implements ListSet {
 
     public boolean remove(int value) {
         Node toRemove = new Node(value);
+        boolean cut;
         while(true) {
 	        Node prev = head;
 	        Node succ = head.atom.getReference();
@@ -47,12 +45,12 @@ public class LockFreeListSet implements ListSet {
 	        if(succ.compareTo(toRemove) != 0) {
 	        	return false;
 	        }
-	        if(!succ.atom.compareAndSet(succ.atom.getReference(), succ.atom.getReference(), false, true)) {
-	        	return false;
-	        }
-	        if(prev.atom.compareAndSet(succ, succ.atom.getReference(), false, false)) {
-	        	return true;
-	        }
+	        Node nxt = succ.atom.getReference();
+	        cut = succ.atom.compareAndSet(nxt, nxt, false, true);
+	        if(!cut) cut = succ.atom.compareAndSet(nxt, nxt, true, true);
+	        if(!cut) continue;
+	        cut = prev.atom.compareAndSet(succ, nxt, false, false);
+	        if(cut) return true;
         }
     }
 
