@@ -21,31 +21,59 @@ __global__ void comparevals(int* src, int* dest, int len) {
 	dest[d] = ((val1 < val2) ? val1 : val2);
 }
 
-int main(int argc, char** argv) {
-	bool DEBUG = true;
-	int count;
+int getmin() {
+	int count, min;
 	int* arr = getarr(&count);
-        for(int i = 0; i < count; i++){
-                printf("%d, ", arr[i]);
-        }
-	printf("\n\n");
 	int* csrc; 
 	int* cdest;
-	cudaMalloc(&csrc, count * sizeof(int));
-	cudaMalloc(&cdest, count * sizeof(int));
-	cudaMemcpy(arr, csrc, count, cudaMemcpyHostToDevice);
-	dim3 dimGrid((count / 2) + (count % 2), 1);
-	dim3 dimBlock(1, 1, 1);	
-	for(int i = count; i == 0; i = (i / 2) + (i % 2)) {
-		comparevals<<<dimGrid, dimBlock>>>(csrc, cdest, i);
-		cudaMemcpy(cdest, csrc, count, cudaMemcpyDeviceToDevice);
+	cudaMalloc((void**) &csrc, count * sizeof(int));
+	cudaMalloc((void**) &cdest, count * sizeof(int));
+	cudaMemcpy((void*) csrc, (void*) arr, count * sizeof(int), cudaMemcpyHostToDevice);
+	for(int i = count; i != 1; i = (i / 2) + (i % 2)) {
+		comparevals<<<((count/2) + (count%2)), 1>>>(csrc, cdest, i);
 		cudaThreadSynchronize();
+		cudaMemcpy((void*) csrc, (void*) cdest, count * sizeof(int), cudaMemcpyDeviceToDevice);
 	}
-	cudaMemcpy(cdest, arr, count, cudaMemcpyDeviceToHost);
+	cudaMemcpy((void*) arr, (void*) cdest, count * sizeof(int), cudaMemcpyDeviceToHost);
+	min = arr[0];	
 	cudaFree(cdest);
 	cudaFree(csrc);
-	printf("%d, ", arr[0]);
 	free(arr);
+	return min;
+}
+
+__global__ void lastdigit(int* arr) {
+	arr[blockIdx.x] = arr[blockIdx.x] % 10;
+}
+
+int* getlastdigits(int* len) {
+	int* arr = getarr(len);
+	int mylen = *len;
+	int* carr;
+	cudaMalloc((void**) &carr, mylen * sizeof(int));
+	cudaMemcpy((void*) carr, (void*) arr, mylen * sizeof(int), cudaMemcpyHostToDevice);
+	lastdigit<<<mylen, 1>>>(carr);
+	cudaThreadSynchronize();
+	cudaMemcpy((void*) arr, (void*) carr, mylen * sizeof(int), cudaMemcpyDeviceToHost);
+	cudaFree(carr);
+	return arr;
+}
+
+int main(int argc, char** argv) {
+	int min;
+	min = getmin();
+	FILE* f = fopen("./q1a.txt", "w");
+	fprintf(f, "%d", min);
+	fclose(f);
+	
+	int len;	
+	int* ldarr = getlastdigits(&len);
+	f = fopen("./q1b.txt", "w");
+	for(int i = 0; i < len; i++) {
+		if(i == len - 1) fprintf(f, "%d", ldarr[i]);	
+		else fprintf(f, "%d, ", ldarr[i]);
+	}
+	free(ldarr);	
 	return 0;
 }
 

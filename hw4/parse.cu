@@ -53,4 +53,3 @@ int* getarr(int* arrlen) {
 	*arrlen = count;
 	return arr;
 }
-
